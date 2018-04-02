@@ -1,0 +1,98 @@
+<?php
+$this->load->view('admin/vwHeader');
+?>
+<!--  
+Author : Oda Aditiya Nicola
+Downloaded from http://odanicola.com
+-->
+
+<div id="page-wrapper">
+
+    <div class="row">
+        <div class="col-lg-12">
+            <h1>SOSMED <small>Edit Page </small><small><a href="<?php echo base_url();?>admin/post/add_new" 
+            class="add-new" >Add New</a></small></h1>
+            <ol class="breadcrumb">
+                <li><a href="<?php echo base_url(); ?>admin/sosmed/"><i class="icon-dashboard"></i> SOSMED</a></li>
+                <li class="active"><i class="icon-file-alt"></i> Edit Page</li>        
+
+
+            </ol>
+        </div>
+    </div><!-- /.row -->
+	<?php var_dump($sosmed); die(); ?>
+    <div class="fld col-lg-12">
+    <div class="col-lg-10">
+        <form method="post" action="<?php echo base_url(); ?>admin/sosmed/update_sosmed" role="form" enctype="multipart/form-data">
+        <div class="form-group" >
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <label for="title">Sosmed Name</label>
+                <input type="text" name="title" readonly="readonly" 
+                value="<?php echo 'Facebook';?>" 
+                class="form-control input-sm" >
+            </div>
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <label for="url">Url Sosmed</label>
+                <input type="text" name="facebook_url" value="<?php echo isset($sosmed[0]['url']) && !empty($sosmed[0]['url']) ? $sosmed[0]['url'] : '';?>" 
+                placeholder="Insert Facebook Page URL" class="form-control input-sm" >
+            </div>
+        </div>
+        <div class="form-group" >
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="title" readonly="readonly" 
+                value="<?php echo 'Instagram'; ?>" 
+                class="form-control input-sm" >
+            </div>
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="instagram_url" value="<?php echo isset($sosmed[1]['url']) && !empty($sosmed[1]['url']) ? $sosmed[1]['url'] : '';?>" 
+                placeholder="Insert Instagram Page URL" class="form-control input-sm" >
+            </div>
+        </div>
+        <div class="form-group" >
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="title" readonly="readonly" 
+                value="<?php echo isset($sosmed[2]['sosmed']) && !empty($sosmed[2]['sosmed']) ? $sosmed[2]['sosmed'] : '';?>" 
+                class="form-control input-sm" >
+            </div>
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="tumblr_url" value="<?php echo isset($sosmed[2]['url']) && !empty($sosmed[2]['url']) ? $sosmed[2]['url'] : '';?>" 
+                placeholder="Insert Tumblr URL" class="form-control input-sm" >
+            </div>
+        </div>
+		<div class="form-group" >
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="title" readonly="readonly" 
+                value="<?php echo isset($sosmed[3]['sosmed']) && !empty($sosmed[3]['sosmed']) ? $sosmed[3]['sosmed'] : '';?>" 
+                class="form-control input-sm" >
+            </div>
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="twitter_url" value="<?php echo isset($sosmed[3]['url']) && !empty($sosmed[3]['url']) ? $sosmed[3]['url'] : '';?>" 
+                placeholder="Insert Twitter URL" class="form-control input-sm" >
+            </div>
+        </div>
+		<div class="form-group" >
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="title" readonly="readonly" 
+                value="<?php echo isset($sosmed[4]['sosmed']) && !empty($sosmed[4]['sosmed']) ? $sosmed[4]['sosmed'] : '';?>" 
+                class="form-control input-sm" >
+            </div>
+            <div class="col-md-6" style="margin-bottom: 20px;">
+                <input type="text" name="youtube_url" value="<?php echo isset($sosmed[4]['url']) && !empty($sosmed[4]['url']) ? $sosmed[4]['url'] : '';?>" 
+                placeholder="Insert Youtube URL" class="form-control input-sm" >
+            </div>
+        </div>
+            <input type="hidden" value="<?php echo isset($sosmed[0]['sosmed']) && !empty($sosmed[0]['sosmed']) ? $sosmed[0]['sosmed'] : '';?>" name="facebook">
+            <input type="hidden" value="<?php echo isset($sosmed[1]['sosmed']) && !empty($sosmed[1]['sosmed']) ? $sosmed[1]['sosmed'] : '';?>" name="twitter"> 
+            <input type="hidden" value="<?php echo isset($sosmed[2]['sosmed']) && !empty($sosmed[2]['sosmed']) ? $sosmed[2]['sosmed'] : '';?>" name="youtube">
+            <input type="hidden" value="<?php echo isset($sosmed[3]['sosmed']) && !empty($sosmed[3]['sosmed']) ? $sosmed[3]['sosmed'] : '';?>" name="instagram">
+            <input type="hidden" value="<?php echo isset($sosmed[4]['sosmed']) && !empty($sosmed[4]['sosmed']) ? $sosmed[4]['sosmed'] : '';?>" name="tumblr">
+            <input type="submit" name="btn_submit" class="btn btn-primary" value="Update">
+        </form>
+    </div>
+    </div>      
+
+</div><!-- /#page-wrapper -->
+
+<?php
+$this->load->view('admin/vwFooter');
+?>

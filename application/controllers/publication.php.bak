@@ -1,0 +1,309 @@
+<?php
+
+if (!defined('BASEPATH'))
+    exit('No direct script access allowed');
+
+class Publication extends CI_Controller {
+
+    /**
+     * Index Page for this controller.
+     *
+     * Maps to the following URL
+     * 		http://example.com/index.php/welcome
+     * 	- or -
+     * 		http://example.com/index.php/welcome/index
+     * 	- or -
+     * Since this controller is set as the default controller in
+     * config/routes.php, it's displayed at http://example.com/
+     *
+     * So any other public methods not prefixed with an underscore will
+     * map to /index.php/welcome/<method_name>
+     * @see http://codeigniter.com/user_guide/general/urls.html
+     */
+    public function __construct() {
+        parent::__construct();
+        $this->load->library('form_validation');
+        $this->load->library("pagination");
+        $this->load->helper('url');
+    }
+
+    public function index() {
+        $this->all();
+    }
+
+    public function all(){
+        $arr['page'] ='Publication';
+        $arr['next_day_1'] = $this->publication_next_day_1();
+        $arr['next_day_2'] = $this->publication_next_day_2();
+        $arr['next_day_3'] = $this->publication_next_day_3();
+        $arr['monthlist'] = $this->getMonthList();
+        $arr['sosmed'] = $this->getSosmed();
+        $arr['logo'] = $this->getLogo();
+
+        $arr['logo_gramedia'] = $this->getLogoGramedia();
+        $arr['youtube'] = $this->getYoutube();
+        $arr['twitter'] = $this->getTwitter();
+        $arr['middle_banner'] = $this->getMidBanner();
+        $arr['left_banner'] = $this->getLeftBanner();
+        $arr['right_banner'] = $this->getRightBanner();
+
+        $config = array();
+        $config["base_url"] = base_url() . "publication/all";
+        $config["total_rows"] = $this->record_count();
+        $config["per_page"] = 3;
+        $config["uri_segment"] = 3;
+        $choice = $config["total_rows"] / $config["per_page"];
+        $config["num_links"] = 3;
+        $config['cur_tag_open'] = '<li class="active"><a href="#">';
+        $config['cur_tag_close'] = '</a></li>';
+        $config['next_link'] = 'Next';
+        $config['prev_link'] = 'Previous';
+
+        $this->pagination->initialize($config);
+
+        if($this->uri->segment(3)){
+            $page = ($this->uri->segment(3)) ;
+        }
+        else{
+            $page = 0;
+        }
+
+        $arr['publication'] = $this->fetch($config["per_page"], $page);
+        $str_links = $this->pagination->create_links();
+        $arr["links"] = explode('&nbsp;',$str_links );
+
+        $arr['content'] = '';
+        $this->load->view('vwHeader',$arr);
+        $this->load->view('vwPublication',$arr);
+    }
+
+    function array_to_csv_download($array, $filename = "export.csv", $delimiter=";") {
+        $f = fopen('php://memory', 'w');
+
+
+        foreach ($array as $line) {
+            fputcsv($f, $line, $delimiter);
+        }
+        fseek($f, 0);
+        header('Content-Type: application/csv');
+        header('Content-Disposition: attachment; filename="'.$filename.'";');
+        fpassthru($f);
+    }
+
+    public function download(){
+        $month 	= $_POST['month'];
+        $year 	= $_POST['year'];
+        $category_id = $this->getCategoryIdByName('Publikasi');
+
+        if(empty($category_id)){
+          $category_id = $this->getCategoryIdByName('Publication');
+        }
+        $qry	= "select title, content from tbl_post where YEAR(date_published) ='".$year."' and MONTH(date_published)='".$month."' and category_id = '".$category_id."'ORDER BY post_id DESC limit 40";
+        if($qry){
+          $arr = $this->db->query($qry)->result_array();
+          $headers = array(array('title' => 'Judul', 'content' => 'Jadwal Publikasi'));
+
+          $data = array_merge($headers, $arr);
+
+          $this->array_to_csv_download($data, 'publication.csv', ';');
+        }else{
+          redirect('publication');
+        }
+    }
+
+    public function record_count() {
+		    $category_id = $this->getCategoryIdByName('Publikasi');
+
+        if(empty($category_id)){
+          $category_id = $this->getCategoryIdByName('Publication');
+        }
+
+        $qry ="select count(post_id) from tbl_post WHERE category_id = '".$category_id."' ORDER BY post_id DESC"; // select data from db
+        if(!empty($limit)){
+            $qry .= "limit ".$limit;
+        }
+        $arr = $this->db->query($qry)->result_array();
+        return (int) $arr[0]['count(post_id)'];
+    }
+
+  	public function fetch($limit, $start) {
+        $this->db->limit($limit, $start);
+        $category_id = $this->getCategoryIdByName('Publikasi');
+
+        if(empty($category_id)){
+          $category_id = $this->getCategoryIdByName('Publication');
+        }
+
+        if(empty($defaut)){ $default = ''; }
+            $this->db
+                ->select("*")
+		            ->where('category_id', $category_id)
+                ->order_by('post_id', 'DESC');
+            $query = $this->db->get('tbl_post');
+            if ($query->num_rows() > 0) {
+              foreach ($query->result() as $row) {
+                  $data[] = $row;
+              }
+
+              return $data;
+            }
+        return false;
+    }
+
+    public function publication_detail($slug){
+        $qry = "select * from tbl_post where slug = '". $slug . "'";
+        $d = $this->db->query($qry)->result_array();
+        if(!empty($d)){
+          $arr['publication_detail'] = $this->db->query($qry)->result_array();
+        }else{
+          redirect('blankpage');
+        }
+        $arr['sosmed'] = $this->getSosmed();
+        $arr['logo'] = $this->getLogo();
+        $arr['logo_gramedia'] = $this->getLogoGramedia();
+        $arr['youtube'] = $this->getYoutube();
+        $arr['twitter'] = $this->getTwitter();
+    		$arr['middle_banner'] = $this->getMidBanner();
+    		$arr['left_banner'] = $this->getLeftBanner();
+    		$arr['right_banner'] = $this->getRightBanner();
+        $arr['other_publication'] = $this->getOtherPublication();
+
+        $arr['page'] = $arr['publication_detail'][0]['title'];
+        $arr['content'] = substr($arr['publication_detail'][0]['content'], 0, 450);
+        $this->load->view('vwHeader',$arr);
+        $this->load->view('vwPublicationDetail',$arr);
+    }
+
+    public function getLogoGramedia(){
+        $qry ='select * from tbl_logo where id = 2'; // select data from db
+        $arr['logo_gramedia'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+    public function getOtherPublication(){
+        $category_id = $this->getCategoryIdByName('Publikasi');
+        $qry = "select * from tbl_post where category_id = '". $category_id . "' ORDER BY post_id DESC limit 5";
+        $arr['other_publication'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+    public function getCategoryIdByName($title){
+      $qry ="select id from tbl_post_category where title = '".$title."'"; // select data from db
+      $arr = $this->db->query($qry)->result_array();
+
+          return (string)$arr[0]['id'];
+    }
+
+  	public function publication_next_day_1(){
+  		$now = date('Y-m-d');
+  		$nextdate = date('Y-m-d H:i:s', strtotime($now . " +1 day"));
+  		$qry = "select * from tbl_comic WHERE `published_date` = '".$nextdate."' ORDER BY ID DESC limit 10";
+  		$arr = $this->db->query($qry)->result_array();
+  		return $arr;
+  	}
+
+  	public function publication_next_day_2(){
+  		$now = date('Y-m-d');
+  		$nextdate = date('Y-m-d H:i:s', strtotime($now . " +2 day"));
+  		$qry = "select * from tbl_comic WHERE `published_date` = '".$nextdate."' ORDER BY ID DESC limit 10";
+  		$arr = $this->db->query($qry)->result_array();
+  		return $arr;
+  	}
+
+  	public function publication_next_day_3(){
+  		$now = date('Y-m-d');
+  		$nextdate = date('Y-m-d H:i:s', strtotime($now . " +3 day"));
+  		$qry = "select * from tbl_comic WHERE `published_date` = '".$nextdate."' ORDER BY ID DESC limit 10";
+  		$arr = $this->db->query($qry)->result_array();
+  		return $arr;
+  	}
+
+  	public function getMonthList(){
+  		$arr = array(
+  			'01' => 'January',
+  			'02' => 'February',
+  			'03' => 'March',
+  			'04' => 'April',
+  			'05' => 'May',
+  			'06' => 'June',
+  			'07' => 'July',
+  			'08' => 'August',
+  			'09' => 'September',
+  			'10' => 'October',
+  			'11' => 'November',
+  			'12' => 'December'
+  		);
+  		return $arr;
+  	}
+
+  	public function search(){
+  		$month 	= $_POST['month'];
+  		$year 	= $_POST['year'];
+  		$qry	= "select * from tbl_comic where YEAR(published_date) ='".$year."' and MONTH(published_date)='".$month."' ORDER BY id DESC limit 40";
+  		if($qry){
+  			$arr['search'] = $this->db->query($qry)->result_array();
+  		}else{
+  			redirect('publication');
+  		}
+  		$arr['sosmed'] = $this->getSosmed();
+          $arr['logo'] = $this->getLogo();
+          $arr['youtube'] = $this->getYoutube();
+          $arr['twitter'] = $this->getTwitter();
+  		$arr['middle_banner'] = $this->getMidBanner();
+  		$arr['left_banner'] = $this->getLeftBanner();
+  		$arr['right_banner'] = $this->getRightBanner();
+  		$arr['monthlist'] = $this->getMonthList();
+
+  		$months = $this->getMonthList();
+  		foreach($months as $key => $value){
+  			if($key == $month){
+  				$month = $value;
+  			}
+  		}
+  		$arr['time'] = array('month' => $month, 'year' => $year);
+  		$this->load->view('vwPublicationSearch',$arr);
+  	}
+    public function getSosmed(){
+        $qry ='select * from tbl_sosmed'; // select data from db
+        $arr['sosmed'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+  	public function getMidBanner(){
+  		$qry = "select*from tbl_banner where position='middle' order by id DESC limit 1";
+  		$arr['middle_banner'] = $this->db->query($qry)->result_array();
+          return $arr;
+  	}
+
+  	public function getLeftBanner(){
+  		$qry = "select*from tbl_banner where position='left' order by id DESC limit 2";
+  		$arr['left_banner'] = $this->db->query($qry)->result_array();
+          return $arr;
+  	}
+
+  	public function getRightBanner(){
+  		$qry = "select*from tbl_banner where position='right' order by id DESC limit 2";
+  		$arr['right_banner'] = $this->db->query($qry)->result_array();
+          return $arr;
+  	}
+
+    public function getLogo(){
+        $qry ='select * from tbl_logo'; // select data from db
+        $arr['logo'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+    public function getYoutube(){
+        $qry ='select * from tbl_youtube'; // select data from db
+        $arr['youtube'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+    public function getTwitter(){
+        $qry ='select * from tbl_twitter'; // select data from db
+        $arr['twitter'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+}
+
+/* End of file welcome.php */
+/* Location: ./application/controllers/welcome.php */

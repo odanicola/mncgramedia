@@ -1,0 +1,184 @@
+<?php
+
+if (!defined('BASEPATH'))
+    exit('No direct script access allowed');
+
+class Comics extends CI_Controller {
+
+    /**
+     * Index Page for this controller.
+     *
+     * Maps to the following URL
+     * 		http://example.com/index.php/welcome
+     * 	- or -  
+     * 		http://example.com/index.php/welcome/index
+     * 	- or -
+     * Since this controller is set as the default controller in 
+     * config/routes.php, it's displayed at http://example.com/
+     *
+     * So any other public methods not prefixed with an underscore will
+     * map to /index.php/welcome/<method_name>
+     * @see http://codeigniter.com/user_guide/general/urls.html
+     */
+    public function __construct() {
+        parent::__construct();
+        $this->load->library('form_validation');
+    }
+
+    public function index() {
+        $arr['page'] ='comics';
+        $arr['sosmed'] = $this->getSosmed();
+        $arr['coming_soon'] = $this->getComingSoon();
+        $arr['comic'] = $this->getComicByCategory(array('11', '12'), '11', '');
+        $this->load->view('vwComics',$arr);
+    }
+
+    public function getSosmed(){
+        $qry ='select * from tbl_sosmed'; // select data from db
+        $arr['sosmed'] = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+
+    public function getComingSoon(){
+        $category_id = array("11","12");
+        $category_id = serialize($category_id);
+        $category_id_des = '12';
+        $qry ="select * from tbl_comic where category_id='".$category_id."' or category_id = '".$category_id_des."' ORDER BY id DESC limit 4"; // select data from db
+        $arr = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+    public function getComicByCategory($category_id = array(), $default, $limit){
+        $category_id = serialize($category_id);
+        if(empty($defaut)){ $default = ''; }
+        $qry ="select * from tbl_comic where category_id='".$category_id."' or category_id = '".$default."' ORDER BY id DESC"; // select data from db
+        if(!empty($limit)){
+            $qry .= "limit ".$limit;
+        }
+        $arr = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+    
+    public function getComicById($id){
+        $qry = "select * from tbl_comic where id = '". $id . "'";
+        if($this->db->query($qry)->result_array()){
+            return true;
+        } else return false;
+    }
+    public function comic_detail($slug){
+        $arr['page'] ='single_comic';
+        $id = $this->getComicById($slug);
+        if($id){
+            $qry = "select * from tbl_comic where id = '". $slug . "'";
+            $arr['comic_detail'] = $this->db->query($qry)->result_array();
+        }else{
+            $qry = "select * from tbl_comic where slug = '". $slug . "'";
+            $arr['comic_detail'] = $this->db->query($qry)->result_array();
+        }
+        $qry = "select * from tbl_comic ORDER BY ID DESC limit 16";
+        $arr['other_volume'] = $this->db->query($qry)->result_array(); 
+        $arr['sosmed'] = $this->getSosmed();
+        $this->load->view('vwComicDetail',$arr);
+    }
+
+    public function ecomics(){
+        $arr['page'] = 'single_ecomics';
+        $qry = "select * from tbl_comic where id_media_type = 2 ORDER BY id DESC";
+        $arr['ecomics'] = $this->db->query($qry)->result_array();
+        $arr['sosmed'] = $this->getSosmed();
+        $this->load->view('vwEcomics', $arr);
+    }
+
+    public function books($category = ''){
+        $arr['page'] = 'single_books';
+        $jnovel = '11';
+        $knovel = '12';
+        $indonovel = '13';
+        $childbook = '14';
+
+        if($category == 'j-novel'){
+            $qry = "select * from tbl_comic where id_media_type = 1 and category_id ='" . serialize($jnovel) . "' or category_id =" . $jnovel . " ORDER BY id DESC";
+            $arr['books'] = $this->db->query($qry)->result_array(); 
+        }
+        elseif($category == 'k-novel'){
+            $qry = "select * from tbl_comic where id_media_type = 1 and category_id ='" . serialize($knovel) . "' or category_id =" . $knovel . " ORDER BY id DESC";
+            $arr['books'] = $this->db->query($qry)->result_array(); 
+        }elseif($category == 'indonesian-novel'){
+            $qry = "select * from tbl_comic where id_media_type = 1 and category_id ='" . serialize($indonovel) . "' or category_id =" . $indonovel . " ORDER BY id DESC";
+            $arr['books'] = $this->db->query($qry)->result_array(); 
+        }elseif($category == 'children-book'){
+            $qry = "select * from tbl_comic where id_media_type = 1 and category_id ='" . serialize($childbook) . "' or category_id =" . $childbook . " ORDER BY id DESC";
+            $arr['books'] = $this->db->query($qry)->result_array();
+        }else{
+            $qry = "select * from tbl_comic where id_media_type = 1 ORDER BY id DESC";
+            $arr['books'] = $this->db->query($qry)->result_array(); 
+        }
+
+        $arr['sosmed'] = $this->getSosmed();
+        $this->load->view('vwBooks', $arr);
+    }
+
+    public function do_login() {
+
+        if ($this->session->userdata('is_client_login')) {
+            redirect('home/loggedin');
+        } else {
+            $user = $_POST['username'];
+            $password = $_POST['password'];
+
+            $this->form_validation->set_rules('username', 'Username', 'required');
+            $this->form_validation->set_rules('password', 'Password', 'required');
+
+            if ($this->form_validation->run() == FALSE) {
+        /*
+         * Code By Abhishek R. Kaushik
+         * Sr. Software Developer 
+         */
+                $this->load->view('login');
+            } else {
+                $sql = "SELECT * FROM users WHERE user_name = '" . $user . "' AND user_hash = '" . md5($password) . "'";
+                $val = $this->db->query($sql);
+
+
+                if ($val->num_rows) {
+                    foreach ($val->result_array() as $recs => $res) {
+
+                        $this->session->set_userdata(array(
+                            'id' => $res['id'],
+                            'user_name' => $res['user_name'],
+                            'email' => $res['email'],                            
+                            'is_client_login' => true
+                                )
+                        );
+                    }
+                    redirect('calls/call');
+                } else {
+                    $err['error'] = 'Username or Password incorrect';
+                    $this->load->view('login', $err);
+                }
+            }
+        }
+           }
+
+        
+    public function logout() {
+        $this->session->unset_userdata('id');
+        $this->session->unset_userdata('username');
+        $this->session->unset_userdata('email');
+        $this->session->unset_userdata('title');
+         $this->session->unset_userdata('ag_country');
+        
+        $this->session->unset_userdata('is_client_login');
+        $this->session->sess_destroy();
+        $this->output->set_header("Cache-Control: no-store, no-cache, must-revalidate, no-transform, max-age=0, post-check=0, pre-check=0");
+        $this->output->set_header("Pragma: no-cache");
+        redirect('home', 'refresh');
+    }
+
+    
+
+}
+
+/* End of file welcome.php */
+/* Location: ./application/controllers/welcome.php */

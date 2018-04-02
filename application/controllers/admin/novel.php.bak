@@ -1,0 +1,414 @@
+<?php
+
+if (!defined('BASEPATH'))
+    exit('No direct script access allowed');
+
+class Novel extends CI_Controller {
+/*
+Author : Oda Aditiya Nicola
+Downloaded from http://odanicola.com
+*/
+    public function __construct() {
+        parent::__construct();
+        $this->load->library('form_validation');
+         if (!$this->session->userdata('is_admin_login')) {
+            redirect('admin/home');
+        }
+        $this->load->helper('form');
+        $this->load->helper('url');
+    }
+
+    public function index() {
+        $arr['novel'] = $this->getAllNovel();
+        $arr['novel_category'] = $this->getAllNovelCategory();
+
+        $this->load->view('admin/novel/vwManageNovel',$arr);
+    }
+
+    public function getAllNovel(){
+        $qry ='Select * from tbl_novel'; // select data from db
+        $arr = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+    public function getAllNovelCategory(){
+        $qry ='Select * from tbl_novel_category'; // select data from db
+        $arr = $this->db->query($qry)->result_array();
+        return $arr;
+    }
+
+     public function edit_novel($id='') {
+        if($id!=''){
+        $qry ='Select * from tbl_novel where id='.$id ; // select data from db
+        $arr['novel'] = $this->db->query($qry)->result_array();
+        $qry_cat = 'select * from tbl_novel_category';
+        $arr['novel_category'] = $this->db->query($qry_cat)->result_array();
+            /*if(!empty($id)){
+                $qry_img = 'select * from tbl_novel_image where comic_id='.$id;
+                $arr['novel_image'] = $this->db->query($qry_img)->result_array();
+            }else{
+                $arr['novel_image'] = array('');
+            }*/
+        $qry_media_type = 'select * from tbl_media_type';
+        $arr['media_type'] = $this->db->query($qry_media_type)->result_array();
+		    $qry_ori = 'select * from tbl_novel_country';
+        $arr['novel_country'] = $this->db->query($qry_ori)->result_array();
+
+        $this->load->view('admin/novel/vwEditNovel',$arr);
+        }else{
+            redirect('admin/novel');
+        }
+    }
+
+    public function add_new(){
+        $qry_media_type = 'select * from tbl_media_type';
+        $arr['media_type'] = $this->db->query($qry_media_type)->result_array();
+        $qry_cat = 'select * from tbl_novel_category';
+        $arr['novel_category'] = $this->db->query($qry_cat)->result_array();
+		    $qry_ori = 'select * from tbl_novel_country';
+        $arr['novel_country'] = $this->db->query($qry_ori)->result_array();
+
+        $this->load->view('admin/novel/vwAddNovel',$arr);
+    }
+
+    private function _upload_files($field='userfile'){
+        $files = array();
+        foreach( $_FILES[$field] as $key => $all )
+            foreach( $all as $i => $val )
+                $files[$i][$key] = $val;
+
+        $files_uploaded = array();
+        for ($i=0; $i < count($files); $i++) {
+            $_FILES[$field] = $files[$i];
+            if ($this->upload->do_upload($field))
+                $files_uploaded[$i] = $this->upload->data($files);
+            else
+                $files_uploaded[$i] = null;
+        }
+        return $files_uploaded;
+    }
+
+    public function checkSlug($slug){
+        $sql = "select slug from tbl_novel where slug = '".$slug."'";
+        $val = $this->db->query($sql)->result_array();
+
+        $count = "select count(slug) as slug_row from tbl_novel where slug = '".$slug."'";
+        $slug_row = $this->db->query($count)->result_array();
+
+        $value = array_merge($val, $slug_row);
+        return $value;
+    }
+
+    public function setSlug($slug){
+        $slug = $this->checkSlug($slug);
+        foreach ($slug as $key => $value) {
+           $slug_key = $key;
+           $slug_val = $value;
+
+           foreach ($slug_val as $key => $value) {
+              $slugval[$key] = $value;
+           }
+        }
+        $no_of_slug = $slugval['slug_row'] + 1;
+        $final_slug = $slugval['slug'] . "-" . $no_of_slug;
+
+        return $final_slug;
+    }
+
+    public function format_uri( $string, $separator = '-' )
+    {
+        $accents_regex = '~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);~i';
+        $special_cases = array( '&' => 'and', "'" => '');
+        $string = mb_strtolower( trim( $string ), 'UTF-8' );
+        $string = str_replace( array_keys($special_cases), array_values( $special_cases), $string );
+        $string = preg_replace( $accents_regex, '$1', htmlentities( $string, ENT_QUOTES, 'UTF-8' ) );
+        $string = preg_replace("/[^a-z0-9]/u", "$separator", $string);
+        $string = preg_replace("/[$separator]+/u", "$separator", $string);
+        return $string;
+    }
+
+    public function add_novel(){
+        $publish_date       = $_POST['publish_date'];
+        $publish_date       = explode('/',$publish_date);
+            $tgl_publish_date       = $publish_date[1];
+            $bulan_publish_date     = $publish_date[0];
+            $tahun_publish_date     = $publish_date[2];
+        $publish_date       = $tahun_publish_date."-".$bulan_publish_date."-".$tgl_publish_date;
+        $title       = $_POST['title'];
+        $url         = $_POST['url'];
+        $author      = $_POST['author'];
+        $isbn        = $_POST['isbn'];
+        $price       = $_POST['price'];
+        //$rate        = $_POST['rate'];
+        $origin      = $_POST['origin'];
+        $size        = $_POST['size'];
+        $pages       = $_POST['pages'];
+        $tags        = $_POST['tags'];
+        $summary     = $_POST['summary'];
+        $category    = $_POST['category'];
+
+		    //$category	 = implode(",",$category);
+
+        $media_type  = $_POST['media_type'];
+        $link_download  = $_POST['link_download'];
+        $link_full_version = $_POST['link_full_version'];
+        //$category    = serialize($category);
+        $date_add    = date('Y-m-d h:i:s');
+        $slug        = $title;
+        $slug = $this->format_uri( $slug, $separator = '-' );
+        //$slug        = $this->setSlug($slug);
+		    //$status_publish = $_POST['status_publish'];
+
+         $config['upload_path']   =   "uploads/";
+         $config['allowed_types'] =   "gif|jpg|jpeg|png";
+         $config['max_size']      =   "5000";
+         $config['max_width']     =   "3000";
+         $config['max_height']    =   "3000";
+         $this->load->library('upload',$config);
+
+         if ($_FILES['gallery']) {
+            $images= $this->_upload_files('gallery');
+         }
+
+         foreach ($images as $key => $value) {
+           $image_gallery[] = str_replace('','_', $value['file_name']);
+         }
+
+         $image_gallery = serialize($image_gallery);
+
+         $image_name = '';
+         $image_thumb = '';
+
+         if(!$this->upload->do_upload())
+         {
+            // echo $this->upload->display_errors();
+         }
+         else
+         {
+             $finfo = $this->upload->data();
+             $this->_createThumbnail(str_replace('','_', $finfo['file_name']));
+             $data['uploadInfo'] = $finfo;
+             $data['thumbnail_name'] = $finfo['raw_name']. '_thumb' .$finfo['file_ext'];
+
+             $image_name = str_replace('','_',$finfo['file_name']);
+             $image_thumb = $finfo['raw_name']. '_thumb' .$finfo['file_ext'];
+         }
+
+         if(isset($title) && !empty($title) ){
+           $sql = "insert into tbl_novel values ('', '$category', '$media_type', '$date_add', '$publish_date', '$title', '$url', '$link_download',
+                  '$link_full_version', '$author', '$isbn', '$price', '', '$origin', '$size', '$pages', '$tags', '$summary', '$image_name', '$image_thumb',
+                  '$image_name', '0', 'first', '$image_gallery', '$slug')";
+           $val = $this->db->query($sql);
+
+           $arr['flash'] = 'Novel was successfully added.';
+           $arr['status'] = '0';
+           $arr['novel'] = $this->getAllNovel();
+           $arr['novel_category'] = $this->getAllNovelCategory();
+
+           $this->load->view('admin/novel/vwManageNovel',$arr);
+
+           //redirect('admin/novel/');
+         }else{
+           $arr['flash'] = 'An error occured while saving data.';
+           $arr['status'] = '1';
+           $arr['novel'] = $this->getAllNovel();
+           $arr['novel_category'] = $this->getAllNovelCategory();
+
+           $this->load->view('admin/novel/vwManageNovel',$arr);
+         }
+  }
+
+
+   public function update_novel() {
+       $publish_date       = $_POST['publish_date'];
+       if(strpos($publish_date, '/') !== false){
+         $publish_date       = explode('/', $publish_date);
+            $tgl_publish_date       = $publish_date[1];
+            $bulan_publish_date     = $publish_date[0];
+            $tahun_publish_date     = $publish_date[2];
+         $publish_date= $tahun_publish_date."-".$bulan_publish_date."-".$tgl_publish_date;
+       }
+
+       $id          = $_POST['pst_id'];
+       $title       = $_POST['title'];
+       $url         = $_POST['url'];
+       $author      = $_POST['author'];
+       $isbn        = $_POST['isbn'];
+       $price       = $_POST['price'];
+       //$rate        = $_POST['rate'];
+       $origin      = $_POST['origin'];
+       $size        = $_POST['size'];
+       $pages       = $_POST['pages'];
+       $tags        = $_POST['tags'];
+       $summary     = $_POST['summary'];
+       $category    = $_POST['category'];
+	   //$category	 = implode(",",$category);
+       $media_type  = $_POST['media_type'];
+       $link_download  = $_POST['link_download'];
+       $link_full_version = $_POST['link_full_version'];
+       //$category    = serialize($category);
+       $slug        = $_POST['title'];
+       $slug = $this->format_uri( $slug, $separator = '-' );
+	   //$status_publish = $_POST['status_publish'];
+
+       $userfile = $_FILES['userfile'];
+
+       foreach ($userfile as  $key => $value) {
+         $gambar[] = $key;
+         $gambar_val[] = $value;
+       }
+
+       $get_image_val = $gambar_val[0];
+
+       $config['upload_path']   =   "uploads/";
+       $config['allowed_types'] =   "gif|jpg|jpeg|png";
+       $config['max_size']      =   "5000";
+       $config['max_width']     =   "3000";
+       $config['max_height']    =   "3000";
+       $this->load->library('upload',$config);
+
+       $gallery = $_FILES['gallery'];
+
+       foreach ($gallery as  $key => $value) {
+         $gallery_key[] = $key;
+         $gallery_val[] = $value;
+       }
+
+       $get_gallery_val = $gallery_val[0];
+
+       foreach ($get_gallery_val as $key => $value) {
+         $get_gallery_val = $value;
+       }
+
+       if ($gallery) {
+           $images= $this->_upload_files('gallery');
+       }
+
+       foreach ($images as $key => $value) {
+           $image_gallery[] = str_replace('','_', $value['file_name']);
+       }
+
+       $image_name = '';
+       $image_thumb = '';
+
+         if(!empty($get_image_val)){
+           if($this->upload->do_upload()){
+             $finfo = $this->upload->data();
+             $this->_createThumbnail(str_replace('','_', $finfo['file_name']));
+             $data['uploadInfo'] = $finfo;
+             $data['thumbnail_name'] = $finfo['raw_name']. '_thumb' .$finfo['file_ext'];
+             $image_name = str_replace('','_',$finfo['file_name']);
+             $image_thumb = $finfo['raw_name']. '_thumb' .$finfo['file_ext'];
+            }
+         }
+
+       if(isset($id) && !empty($id) ){
+             $sql = "update tbl_novel set `published_date`='".$publish_date."',`title`='".$title."', `id_media_type`='".$media_type."', `url`='".$url."', `link_download`='".$link_download."',
+             `link_full_version`='".$link_full_version."', `author`='".$author."', `isbn`='".$isbn."', `price`='".$price."',
+             `origin`='".$origin."', `size`='".$size."', `pages`='".$pages."', `tags`='".$tags."', `summary`='".$summary."',
+             `slug` ='".$slug."',`category_id`='".$category."'";
+             if(!empty($get_image_val)):
+                 $sql .= ",`image`='".$image_name."', `image_thumbnail`='".$image_thumb."', `image_large`='".$image_name."', `sort`='0',
+                 `status`='first'";
+             endif;
+
+             if(!empty($get_gallery_val)):
+                  $image_gallery = serialize($image_gallery);
+                  $sql .= ",`image_gallery`='".$image_gallery."'";
+             endif;
+             $sql .= "where id=".$id;
+
+             $val = $this->db->query($sql);
+
+         /*if(isset($finfo) && !empty($finfo)){
+             $sql_image = "update tbl_novel_image set `image`='".$image_name."', `image_small`='".$image_thumb."',
+             `image_large`='".$image_name."' where novel_id=".$id;
+
+             $val_image = $this->db->query($sql_image);
+         }*/
+         redirect('admin/novel/edit_novel/'.$id);
+        }
+
+        $arr['page'] = 'novel';
+        $this->load->view('admin/novel/vwEditNovel',$arr);
+    }
+
+    public function _createThumbnail($filename)
+    {
+        $config['image_library']    = "gd2";
+        $config['source_image']     = "uploads/" .$filename;
+        $config['create_thumb']     = TRUE;
+        $config['maintain_ratio']   = TRUE;
+        $config['width'] = "80";
+        $config['height'] = "80";
+        $this->load->library('image_lib',$config);
+        if(!$this->image_lib->resize())
+        {
+            echo $this->image_lib->display_errors();
+        }
+    }
+
+    public function delete_novel($id = ''){
+        $arr['page'] = 'novel';
+        if($id!=''){
+            $qry ='delete from tbl_novel where id='.$id ; // select data from db
+            $this->db->query($qry);
+
+            $arr['flash'] = 'Novel was successfully deleted.';
+            $arr['status'] = '0';
+            $arr['novel'] = $this->getAllNovel();
+            $arr['novel_category'] = $this->getAllNovelCategory();
+
+            $this->load->view('admin/novel/vwManageNovel',$arr);
+
+            //redirect('admin/novel');
+        }else{
+
+            $arr['flash'] = 'An error occured while deleting data.';
+            $arr['status'] = '1';
+            $arr['novel'] = $this->getAllNovel();
+            $arr['novel_category'] = $this->getAllNovelCategory();
+
+            $this->load->view('admin/novel/vwManageNovel',$arr);
+
+            //redirect('admin/novel');
+        }
+    }
+
+    public function delete_novel_all(){
+      $action = $_POST['action'];
+
+        if($action == 'delete'){
+          $msg    = !empty($_POST['msg']) ? $_POST['msg']: "";
+          if($msg != ''):
+          for ($i=0; $i < count($msg) ; $i++) {
+    				$this->db->where('id', $msg[$i]);
+      				if($this->db->delete('tbl_novel')){
+                $arr['flash'] = 'Novels were successfully deleted.';
+                $arr['status'] = '0';
+              }else{
+                $arr['flash'] = 'An error occured while deleting data.';
+                $arr['status'] = '1';
+              }
+  			  }
+          endif;
+          //redirect('admin/post');
+
+          $arr['novel'] = $this->getAllNovel();
+          $arr['novel_category'] = $this->getAllNovelCategory();
+
+          $this->load->view('admin/novel/vwManageNovel',$arr);
+        }
+        else{
+
+        $arr['novel'] = $this->getAllNovel();
+        $arr['novel_category'] = $this->getAllNovelCategory();
+
+        $this->load->view('admin/novel/vwManageNovel',$arr);
+      }
+    }
+
+}
+
+/* End of file welcome.php */
+/* Location: ./application/controllers/welcome.php */
